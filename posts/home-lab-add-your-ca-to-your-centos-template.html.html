@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns#">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Home Lab - Add your CA to your CentOS Template &middot; Benedikt Frenzel</title>
+        <meta name="description" content="Yesterday we created our own Root CA, now we want our CentOS Template to trust the certificates signed by it.
+As I want to up my PowerCLI Game, we will use the PowerCLI for all vSphere operations.
+PS /home/bfrenzel&gt; Connect-VIServer 10.7.45.200 [...] User: administrator@vsphere.local Password for user administrator@vsphere.local: **************** [...] Name Port User ---- ---- ---- 10.7.45.200 443 VSPHERE.LOCAL\Administrator After connecting to our vCenter Server we will list our templates.">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.69.1" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta property="og:title" content="Home Lab - Add your CA to your CentOS Template">
+<meta property="og:description" content="Yesterday we created our own Root CA, now we want our CentOS Template to trust the certificates signed by it.
+As I want to up my PowerCLI Game, we will use the PowerCLI for all vSphere operations.
+PS /home/bfrenzel&gt; Connect-VIServer 10.7.45.200 [...] User: administrator@vsphere.local Password for user administrator@vsphere.local: **************** [...] Name Port User ---- ---- ---- 10.7.45.200 443 VSPHERE.LOCAL\Administrator After connecting to our vCenter Server we will list our templates.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ben-on-vms.com/posts/home-lab-add-your-ca-to-your-centos-template/">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/site.css">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/syntax.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
+        
+        
+        
+    </head>
+    <body>
+        
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://ben-on-vms.com/index.xml"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/BenediktFrenzel" rel="me">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/benonvms" rel="me">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="LinkedIn" title="LinkedIn" href="https://ie.linkedin.com/in/benedikt-frenzel-942a7380/" rel="me">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Email" title="Email" href="mailto:hello@ben-on-vms.com">
+                                <i class="fa fa-envelope"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Blog" href="/">Blog</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="About" href="/page/about/">About</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container">
+        <header class="post-header">
+    <h1 class="post-title">Home Lab - Add your CA to your CentOS Template</h1>
+    
+</header>
+
+        <div class="post-content clearfix">
+    
+
+    <p>Yesterday we <a href="/posts/home-lab-creating-a-home-lab-root-ca/">created our own Root CA</a>, now we want our <a href="/posts/home-lab-preparing-a-centos-8-template/">CentOS Template</a> to trust the certificates signed by it.</p>
+<p>As I want to up my PowerCLI Game, we will use the PowerCLI for all vSphere operations.</p>
+<pre><code>PS /home/bfrenzel&gt; Connect-VIServer  10.7.45.200
+[...]
+User: administrator@vsphere.local
+Password for user administrator@vsphere.local: ****************
+[...]
+Name                           Port  User
+----                           ----  ----
+10.7.45.200                    443   VSPHERE.LOCAL\Administrator
+</code></pre><p>After connecting to our vCenter Server we will list our templates.</p>
+<pre><code>PS /home/bfrenzel&gt; Get-Template
+
+Name
+----
+template-centos-8
+</code></pre><p>After we got our the name of our template we can convert it back.</p>
+<pre><code>PS /home/bfrenzel&gt; Set-Template -Template 'template-centos-8' -ToVM                
+
+Name                 PowerState Num CPUs MemoryGB
+----                 ---------- -------- --------
+template-centos-8    PoweredOff 1        2.000
+</code></pre><p>Now we can power the VM on</p>
+<pre><code>PS /home/bfrenzel&gt; Start-VM template-centos-8
+                                                                                                                Name                 PowerState Num CPUs MemoryGB                                                               ----                 ---------- -------- --------                                                               template-centos-8    PoweredOn  1        2.000                      
+</code></pre><p>As we need to SSH into the VM we need an IP address, and as the VMware Tools are installed we can also use the PowerCLI for this.</p>
+<pre><code>PS /home/bfrenzel&gt; (Get-VM -Name template-centos-8).Guest.IPAddress
+10.7.87.103
+fe80::d81:4682:ec49:ee3d
+
+To add the CA Certificate we first need to retrive it from our Root CA, later we will make it much easier to retrive, but for now we ssh into our CA VM and just copy the file content.
+
+</code></pre><pre><code>[causer@root-ca ~]$ cat pki/ca.crt 
+-----BEGIN CERTIFICATE-----
+MIIFYDCCA0igAwIBAgIUHthbeNnk6zjJ4mf/nZLoRiqHMTswDQYJKoZIhvcNAQEN
+BQAwHTEbMBkGA1UEAwwSQmVuIG9uIFZNcyBSb290IENBMB4XDTE5MTIyNzE0MDYw
+NFoXDTIyMDMzMTE0MDYwNFowHTEbMBkGA1UEAwwSQmVuIG9uIFZNcyBSb290IENB
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxzWES69UMg8Dgo3Tx3sW
++TKGxndzXKzP+lH3ypzst6TnBM4vjEQJrcp7DArhwwFwxtf2D4C3DJ79goREs6sa
+[...]
+Hk9Ti5ppJ2ikp6wHiVTrDnBJFxzaYy4Qw/Nz8Jcp3c4fZllogrHEKpK7Xsmor9Dg
+IBzcD7jdV7dG2e4XfW8L6u3nhSfiEV9l2jfk4qDMr01IxVNyIk5dsboTBtVJuwoH
+4fuStkRwcOgC19cLMYFRVX1lD68uosUCq2pCc1VYaDrDjKkGX58LuZ/PC/Q6m7rk
+RO3raJhzRG5Ycd+UjxWxX5hZrPaY2rHgYo+4OF8MI8EnhPQttcjepDUiUzxgAmir
+4oCj+0JIoIZctG/gq976SqTcSguenD0tbqx1zmdLuadhkwaIenmc/NdEUeA0fNL0
+uCB4ZcH7d1G4vCHtw71UdhuQI+q611zC3jMZ7uzTDL8jy3PxGdobZ5j9OvZuSHeH
+l47T7sVbt2kgNTsbsFUJkKsT0z8yMbAYOu0fFolCSXKf3ujG
+-----END CERTIFICATE-----
+[causer@root-ca ~]$ 
+</code></pre><p>On our template we will need to create a file containing the certificate.</p>
+<pre><code>[root@template-centos-8 ~]# vim /etc/pki/ca-trust/source/anchors/lab-root-ca.crt
+</code></pre><p>After we copied the content we now can update the trust store on our system.</p>
+<pre><code>[root@template-centos-8 ~]# update-ca-trust extract
+</code></pre><p>Now all new VMs created by this template will trust our Lab CA.</p>
+<p>We can run the clean up steps from the <a href="/home-lab-preparing-a-centos-8-template/">article &ldquo;Home Lab - Preparing a CentOS 8 Template&rdquo;</a> to make a nice clean template again.</p>
+<pre><code>PS /home/bfrenzel&gt; $vm = Get-VM 'template-centos-8'
+PS /home/bfrenzel&gt; New-Template -VM $vm -Name 'template-centos-8-with-root-ca' -Datastore 'datastore2' -Location 'Templates'
+PS /home/bfrenzel&gt; Remove-VM $vm
+</code></pre>
+</div>
+
+        <footer class="post-footer clearfix">
+    
+        <p class="post-tags">
+            <span>Tagged:</span>
+            
+            
+                <a href="/tags/lab/">Lab</a>, 
+            
+                <a href="/tags/linux/">Linux</a>, 
+            
+                <a href="/tags/tls/ssl/">TLS/SSL</a>
+            
+        </p>
+    
+
+    <div class="share">
+        
+            <a class="icon-twitter" href="https://twitter.com/share?text=Home%20Lab%20-%20Add%20your%20CA%20to%20your%20CentOS%20Template&url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-add-your-ca-to-your-centos-template%2f"
+                onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fa fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+        
+
+        
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-add-your-ca-to-your-centos-template%2f"
+                onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fa fa-facebook"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+        
+
+        
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-add-your-ca-to-your-centos-template%2f"
+              onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+              <i class="fa fa-google-plus"></i>
+                <span class="hidden">Google+</span>
+            </a>
+        
+        
+            <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&title=Home%20Lab%20-%20Add%20your%20CA%20to%20your%20CentOS%20Template&url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-add-your-ca-to-your-centos-template%2f&summary="
+               onclick="window.open(this.href, 'linkedin-share', 'width=554,height=481');return false;">
+               <i class="fa fa-linkedin"></i>
+               <span class="hidden">LinkedIn</span>
+            </a>
+        
+    </div>
+</footer>
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+
+                <p class="footer-copyright">
+                    <span>&copy; 2020 / Powered by <a href="https://gohugo.io/">Hugo</a></span>
+                </p>
+                <p class="footer-copyright">
+                    <span><a href="https://github.com/roryg/ghostwriter">Ghostwriter theme</a> By <a href="http://jollygoodthemes.com">JollyGoodThemes</a></span>
+                    <span>/ <a href="https://github.com/jbub/ghostwriter">Ported</a> to Hugo By <a href="https://github.com/jbub">jbub</a></span>
+                </p>
+            </div>
+        </footer>
+
+        <script src="https://ben-on-vms.com/js/jquery-1.11.3.min.js"></script>
+        <script src="https://ben-on-vms.com/js/jquery.fitvids.js"></script>
+        <script src="https://ben-on-vms.com/js/scripts.js"></script>
+    </body>
+</html>
+
