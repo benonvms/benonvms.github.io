@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns#">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Home Lab - Use our Root CA for the vCenter Certificate &middot; Benedikt Frenzel</title>
+        <meta name="description" content="We have no configured our Root CA, and configured our clients to trust it, so I would say it is time to replace the vCenter Server Certificate so we get rid of the stupid certificate warnings.
+We will use the vCenter REST API, because I wanted to try it out.
+First we need to authenticate against the vCenter, so we are allowed to use the Certificate Manager API.
+[labuser@shell ~]$ curl -k -i -u &#39;administrator@vsphere.">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.69.1" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta property="og:title" content="Home Lab - Use our Root CA for the vCenter Certificate">
+<meta property="og:description" content="We have no configured our Root CA, and configured our clients to trust it, so I would say it is time to replace the vCenter Server Certificate so we get rid of the stupid certificate warnings.
+We will use the vCenter REST API, because I wanted to try it out.
+First we need to authenticate against the vCenter, so we are allowed to use the Certificate Manager API.
+[labuser@shell ~]$ curl -k -i -u &#39;administrator@vsphere.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ben-on-vms.com/posts/home-lab-use-our-root-ca-for-the-vcenter-certificate/">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/site.css">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/syntax.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
+        
+        
+        
+    </head>
+    <body>
+        
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://ben-on-vms.com/index.xml"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/BenediktFrenzel" rel="me">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/benonvms" rel="me">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="LinkedIn" title="LinkedIn" href="https://ie.linkedin.com/in/benedikt-frenzel-942a7380/" rel="me">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Email" title="Email" href="mailto:hello@ben-on-vms.com">
+                                <i class="fa fa-envelope"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Blog" href="/">Blog</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="About" href="/page/about/">About</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container">
+        <header class="post-header">
+    <h1 class="post-title">Home Lab - Use our Root CA for the vCenter Certificate</h1>
+    
+</header>
+
+        <div class="post-content clearfix">
+    
+
+    <p>We have no configured our Root CA, and configured our clients to trust it, so I would say it is time to replace the vCenter Server Certificate so we get rid of the stupid certificate warnings.</p>
+<p>We will use the vCenter REST API, because I wanted to try it out.</p>
+<p>First we need to authenticate against the vCenter, so we are allowed to use the Certificate Manager API.</p>
+<pre><code>[labuser@shell ~]$ curl -k -i -u 'administrator@vsphere.local:VMware1!' -X POST -c cookie-jar.txt https://vcsa-01.lab.ben-on-vms.com/rest/com/vmware/cis/session
+
+</code></pre><p>The command will request a session token, and store it in a cookie, the response should look something like this</p>
+<pre><code>HTTP/1.1 200 OK
+Date: Mon, 30 Dec 2019 20:17:09 GMT
+Set-Cookie: vmware-api-session-id=d41d8cd98f00b204e9800998ecf8427e;Path=/rest;Secure;HttpOnly
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{&quot;value&quot;:&quot;d41d8cd98f00b204e9800998ecf8427e&quot;}
+</code></pre><p>Now we can use the cookie to perform all vCenter tasks, we need. To request the Certificate Signing Request we have to prepate the POST request.</p>
+<pre><code>{
+  &quot;spec&quot;: {
+    &quot;email_address&quot;: &quot;blog@ben-on-vms.com&quot;,
+    &quot;country&quot;: &quot;IE&quot;,
+    &quot;state_or_province&quot;: &quot;Cork&quot;,
+    &quot;organization&quot;: &quot;Ben's Lab&quot;,
+    &quot;key_size&quot;: 2048,
+    &quot;organization_unit&quot;: &quot;vSphere Lab&quot;,
+    &quot;subject_alt_name&quot;: [
+      &quot;vcsa-01.lab.ben-on-vms.com&quot;
+    ],
+    &quot;common_name&quot;: &quot;vcsa-01.lab.ben-on-vms.com&quot;,
+    &quot;locality&quot;: &quot;Cork&quot;
+  }
+}
+
+</code></pre><p>Using this file we can make the API Call that will generate a private key and a CSR on the vCenter.</p>
+<pre><code>[labuser@shell ~]$ curl -k -i -b cookie-jar.txt -X POST -H &quot;Content-Type:application/json&quot; https://vcsa-01.lab.ben-on-vms.com/rest/vcenter/certificate-management/vcenter/tls-csr -d @csr-request.txt
+
+</code></pre><p>The response should look similar to this.</p>
+<pre><code>HTTP/1.1 200 OK
+Date: Mon, 30 Dec 2019 20:25:03 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{&quot;value&quot;:{&quot;csr&quot;:&quot;-----BEGIN CERTIFICATE REQUEST-----\nMIIDODCCAiACAQAwejEjMCEGA1UEAwwadmNzYS0wMS5sYWIuYmVuLW9uLXZtcy5j\nb20xCzAJBgNVBAYTAklFMQ0wCwYDVQQIDARDb3JrMQ0wCwYDVQQHDARDb3JrMRIw\nEAYDVQQKDAlCZW4ncyBMYWIxFDASBgNVBAsMC3ZTcGhlcmUgTGFiMIIBIjANBgkq\nhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwyrvjG3xEf5m+Tx6DvRLVsAtGrpKV0fd\nzsBZVBzLGw4ZGbHwPLSRDB+qf05TuVCgkyiDeg7GdurqV9bLPQkWKuAIFtf7Gf8J\n+vp4HppewziD4uryqNe65VbjuUFdFq/PNDjkYtq1IdIvTtwDyrufpr+Xg+bR4GGw\nJY4mKGTyKYiE+R01I3+iOW35Bnk8RcR4Z5qDPQO1iFY88aUxPh4y/8jLrW9c9E+I\nxyENtDZfbigI38wQIxWiUg/CdsZVGedI+fPllO2fJ99xPeTCywq2iad//s+7qOOh\nymYOMkg8zJ5h70TkGbYDRbRy255uqnUm3J4MXDF4qDgm+JEcaACR4wIDAQABoHkw\ndwYJKoZIhvcNAQkOMWowaDALBgNVHQ8EBAMCBeAwOgYDVR0RBDMwMYETYmxvZ0Bi\nZW4tb24tdm1zLmNvbYIadmNzYS0wMS5sYWIuYmVuLW9uLXZtcy5jb20wHQYDVR0O\nBBYEFHnhLPWAkVOZNR2eCeyqHdv5KZNoMA0GCSqGSIb3DQEBCwUAA4IBAQBgATTl\n0MTdDQGG8dabEfi3UO+uQy2Djcq0aIut9DOvMEDxk32Hj83GeLz4u2UvjOBe4Uto\nb9tNLgJRcQtFHI7AbFc5gr1yg/1m8spO5vYtoTSEiFLqnvd0JGpgiCe3KAt6FHsu\nTc0K8czu+VusIKPFpfJVQg8uq11JQNxNg5u15LFkDvtJo4vVVV8My6W2AffLaHVC\n+oi0bfCEPF8OImmNMVFJhEiMWZEfclZ97MVjeAIkuDbkbjPjB/2oTa3huXjvkM/X\n1w6RoyGVzJ1DjcPywr3WrXWV4Fc9Hy6Zq/4Ay3hQPeWVy3cfyNxBse8FUVcQ/8hx\nzx5HkcrQBKVFAqO8\n-----END CERTIFICATE REQUEST-----&quot;}}
+</code></pre><p>Now we need to clean up the CSR, so the easiest is to copy the part after the &ldquo;csr&rdquo;, and echo it into a file.</p>
+<pre><code>[labuser@shell ~]$ echo -e &quot;-----BEGIN CERTIFICATE REQUEST-----\nMIIDODCCAiACAQAwejEjMCEGA1UEAwwadmNzYS0wMS5sYWIuYmVuLW9uLXZtcy5j\nb20xCzAJBgNVBAYTAklFMQ0wCwYDVQQIDARDb3JrMQ0wCwYDVQQHDARDb3JrMRIw\nEAYDVQQKDAlCZW4ncyBMYWIxFDASBgNVBAsMC3ZTcGhlcmUgTGFiMIIBIjANBgkq\nhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwyrvjG3xEf5m+Tx6DvRLVsAtGrpKV0fd\nzsBZVBzLGw4ZGbHwPLSRDB+qf05TuVCgkyiDeg7GdurqV9bLPQkWKuAIFtf7Gf8J\n+vp4HppewziD4uryqNe65VbjuUFdFq/PNDjkYtq1IdIvTtwDyrufpr+Xg+bR4GGw\nJY4mKGTyKYiE+R01I3+iOW35Bnk8RcR4Z5qDPQO1iFY88aUxPh4y/8jLrW9c9E+I\nxyENtDZfbigI38wQIxWiUg/CdsZVGedI+fPllO2fJ99xPeTCywq2iad//s+7qOOh\nymYOMkg8zJ5h70TkGbYDRbRy255uqnUm3J4MXDF4qDgm+JEcaACR4wIDAQABoHkw\ndwYJKoZIhvcNAQkOMWowaDALBgNVHQ8EBAMCBeAwOgYDVR0RBDMwMYETYmxvZ0Bi\nZW4tb24tdm1zLmNvbYIadmNzYS0wMS5sYWIuYmVuLW9uLXZtcy5jb20wHQYDVR0O\nBBYEFHnhLPWAkVOZNR2eCeyqHdv5KZNoMA0GCSqGSIb3DQEBCwUAA4IBAQBgATTl\n0MTdDQGG8dabEfi3UO+uQy2Djcq0aIut9DOvMEDxk32Hj83GeLz4u2UvjOBe4Uto\nb9tNLgJRcQtFHI7AbFc5gr1yg/1m8spO5vYtoTSEiFLqnvd0JGpgiCe3KAt6FHsu\nTc0K8czu+VusIKPFpfJVQg8uq11JQNxNg5u15LFkDvtJo4vVVV8My6W2AffLaHVC\n+oi0bfCEPF8OImmNMVFJhEiMWZEfclZ97MVjeAIkuDbkbjPjB/2oTa3huXjvkM/X\n1w6RoyGVzJ1DjcPywr3WrXWV4Fc9Hy6Zq/4Ay3hQPeWVy3cfyNxBse8FUVcQ/8hx\nzx5HkcrQBKVFAqO8\n-----END CERTIFICATE REQUEST-----&quot; &gt; vcsa-01.csr 
+
+</code></pre><p>On our Root CA we will perform the following commands.</p>
+<pre><code>[causer@root-ca ~]$ scp labuser@10.7.87.103:vcsa-01.csr .
+labuser@10.7.87.103's password: 
+vcsa-01.csr                               100% 1192   689.1KB/s   00:00   
+</code></pre><p>This will copy the CSR from the Jump VM to our CA.</p>
+<p>As the next step we will need to import the CSR to our PKI</p>
+<pre><code>[causer@root-ca ~]$ /usr/share/easy-rsa/3/easyrsa import-req vcsa-01.csr vcsa-01 
+
+</code></pre><p>Now we can reference the CSR using the name vcsa-01. After the import we can get the CSR signed.</p>
+<pre><code>[causer@root-ca ~]$ /usr/share/easy-rsa/3/easyrsa sign-req server vcsa-01
+
+</code></pre><p>This will use the server template to sign the request, we will be asked to confim the data of the CSR again, and after we confimed the data we have to enter the passphrase of our CA.</p>
+<p>We now have a feshly signed certificate waiting for us at</p>
+<pre><code>/home/causer/pki/issued/vcsa-01.crt
+</code></pre><p>The file can be copied to our Jump VM.</p>
+<pre><code>[causer@root-ca ~]$ scp /home/causer/pki/issued/vcsa-01.crt labuser@10.7.87.103:
+</code></pre><p>On our Jump VM we will now craft the following two requests.</p>
+<p>Firstly we will have to add our Root CA to the vCenter trusted root store.</p>
+<pre><code>{
+  &quot;spec&quot;: {
+    &quot;cert_chain&quot;: {
+      &quot;cert_chain&quot;: [
+        &quot;-----BEGIN CERTIFICATE-----\nMIIFYDCCA0igAwIBAgIUHthbeNnk6zjJ4mf/nZLoRiqHMTswDQYJKoZIhvcNAQEN\nBQAwHTEbMBkGA1UEAwwSQmVuIG9uIFZNcyBSb290IENBMB4XDTE5MTIyNzE0MDYw
+NFoXDTIyMDMzMTE0MDYwNFowHTEbMBkGA1UEAwwSQmVuIG9uIFZNcyBSb290IENB\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxzWES69UMg8Dgo3Tx3sW
++TKGxndzXKzP+lH3ypzst6TnBM4vjEQJrcp7DArhwwFwxtf2D4C3DJ79goREs6sa\n+VbgpbdmhR0uLBmnRN70oUaT0CQNIXOtL6r1dgZ0Yzf+KlMMiQifn/qmJZ30Nvn1
+mzVtueKBPu1RvpGbGhIscpA8XFSw//pVyLSvmWyO84FHV7MBge7WxMDhaXl857hk\nS28OVcVpVPoeaSu8pyIQWceGiqtpAAnh7p92oB+5Q2PxJi9QVDrIQ8n0bveG5wGR\ni+b3i4lqx9vHaeJfXPSVEdH2YMI92pL8nKmjidi4dl5QPdpwBBzzc9HsrUmbbk4v\nymk4OOqD/pUKs5coZBpf6dR1qOjxmFWzum4g1trcwQrpaARteFKx0WiAaC3UNd+g\ntJpeOTGB4jz0hsCxUXjtUlpmT5l3KEWR9DRaAf4+nLM9/E30LLP5nSbWi6JSQbhZ\n2iTXII0qvhENZEMOjDNogCxGkC16eqqf0NspQndhgkpo3Zuu4N1NQXs0V17LnWIV\nXtBXArOeZc1Xfliat7LGWTya+kx1tnU7NcgLty0u+RGur+qUojvgxYz/KWkE4Yhl\nyy9OqBWzVDfDtmXBdgx4WeUOQ47Zhby8PLR10wAHbD8nZbhqaAKTM8iktNjBOqDa\n3JBrk4/rtWibWerRTK2leR8CAwEAAaOBlzCBlDAdBgNVHQ4EFgQUv3gtS4mgHoPZ\nt+xsL1DnwmjuZekwWAYDVR0jBFEwT4AUv3gtS4mgHoPZt+xsL1DnwmjuZemhIaQf\nMB0xGzAZBgNVBAMMEkJlbiBvbiBWTXMgUm9vdCBDQYIUHthbeNnk6zjJ4mf/nZLo\nRiqHMTswDAYDVR0TBAUwAwEB/zALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQENBQAD\nggIBAK0Arq5PcWno91f0MMqTtnCBaTSm4e/LTfmksQWYilWEJmYbQq0NOfaSiYgC\nGGU01HpDYELp9Xl8iyL4NMOyMjRytY5f10ex1mgDkJYcsvFDVooY2VvHLqd6TF7H\nUaRYRmcCuLi54WjFb781IG/oJfLbnTYENCDEl2vX6MOVLyeuqhPjOEjkOsbjnQ+K\nVtvMz2y6dIzqOedqWwiQlNksYjOYPEIQ3GVL9tW86KbKe7G36egC+ijJh5KWnmLW\nHk9Ti5ppJ2ikp6wHiVTrDnBJFxzaYy4Qw/Nz8Jcp3c4fZllogrHEKpK7Xsmor9Dg\nIBzcD7jdV7dG2e4XfW8L6u3nhSfiEV9l2jfk4qDMr01IxVNyIk5dsboTBtVJuwoH\n4fuStkRwcOgC19cLMYFRVX1lD68uosUCq2pCc1VYaDrDjKkGX58LuZ/PC/Q6m7rk\nRO3raJhzRG5Ycd+UjxWxX5hZrPaY2rHgYo+4OF8MI8EnhPQttcjepDUiUzxgAmir\n4oCj+0JIoIZctG/gq976SqTcSguenD0tbqx1zmdLuadhkwaIenmc/NdEUeA0fNL0\nuCB4ZcH7d1G4vCHtw71UdhuQI+q611zC3jMZ7uzTDL8jy3PxGdobZ5j9OvZuSHeH\nl47T7sVbt2kgNTsbsFUJkKsT0z8yMbAYOu0fFolCSXKf3ujG\n-----END CERTIFICATE-----&quot;
+      ]
+    }
+  }
+}
+
+</code></pre><p>Important is that we put the certificate in one line and replace the new lines with a &lsquo;\n&rsquo;.</p>
+<p>To post the certificate to the store we can perform this query.</p>
+<pre><code>[labuser@shell ~]$ curl -k -i -b cookie-jar.txt -X POST -H &quot;Content-Type:application/json&quot; https://vcsa-01.lab.ben-on-vms.com/rest/vcenter/certificate-management/vcenter/trusted-root-chains -d @trusted-root-chains-post-request.txt 
+
+</code></pre><p>The response will look like this.</p>
+<pre><code>HTTP/1.1 100 Continue
+
+HTTP/1.1 200 OK
+Date: Mon, 30 Dec 2019 21:06:45 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{&quot;value&quot;:&quot;BF782D4B89A01E83D9B7EC6C2F50E7C268EE65E9&quot;}
+</code></pre><p>The second request will be the PUT request to install our new vCenter Certifiate</p>
+<pre><code>{
+  &quot;spec&quot;: {
+    &quot;cert&quot;: &quot;-----BEGIN CERTIFICATE-----\nMIIE8jCCAtqgAwIBAgIQZu/cxv876UP44gQUu2T1QzANBgkqhkiG9w0BAQ0FADAd\nMRswGQYDVQQDDBJCZW4gb24gVk1zIFJvb3QgQ0EwHhcNMTkxMjMwMjA0ODI3WhcN\nMjAxMjI5MjA0ODI3WjB6MQswCQYDVQQGEwJJRTENMAsGA1UECAwEQ29yazENMAsG\nA1UEBwwEQ29yazESMBAGA1UECgwJQmVuJ3MgTGFiMRQwEgYDVQQLDAt2U3BoZXJl\nIExhYjEjMCEGA1UEAwwadmNzYS0wMS5sYWIuYmVuLW9uLXZtcy5jb20wggEiMA0G\nCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDDKu+MbfER/mb5PHoO9EtWwC0aukpX\nR93OwFlUHMsbDhkZsfA8tJEMH6p/TlO5UKCTKIN6DsZ26upX1ss9CRYq4AgW1/sZ\n/wn6+ngeml7DOIPi6vKo17rlVuO5QV0Wr880OORi2rUh0i9O3APKu5+mv5eD5tHg\nYbAljiYoZPIpiIT5HTUjf6I5bfkGeTxFxHhnmoM9A7WIVjzxpTE+HjL/yMutb1z0\nT4jHIQ20Nl9uKAjfzBAjFaJSD8J2xlUZ50j58+WU7Z8n33E95MLLCraJp3/+z7uo\n46HKZg4ySDzMnmHvROQZtgNFtHLbnm6qdSbcngxcMXioOCb4kRxoAJHjAgMBAAGj\ngdAwgc0wCQYDVR0TBAIwADAdBgNVHQ4EFgQUeeEs9YCRU5k1HZ4J7Kod2/kpk2gw\nWAYDVR0jBFEwT4AUv3gtS4mgHoPZt+xsL1DnwmjuZemhIaQfMB0xGzAZBgNVBAMM\nEkJlbiBvbiBWTXMgUm9vdCBDQYIUHthbeNnk6zjJ4mf/nZLoRiqHMTswEwYDVR0l\nBAwwCgYIKwYBBQUHAwEwCwYDVR0PBAQDAgWgMCUGA1UdEQQeMByCGnZjc2EtMDEu\nbGFiLmJlbi1vbi12bXMuY29tMA0GCSqGSIb3DQEBDQUAA4ICAQAUUI3B+dwxLIm5\nVyEgck1jrLq76Xzb/PV4sdHBl1kbaH3/Er1ctpyChowX88LwNWTAcGNKHg9LaRV9\nchFnfYEomvnuZxqPYRvJ/D96eFCmww1MT0hIXVPcyeoZThykdLykkIdDUcK6Zqda\nffdqb99zPPe6U+SN2OKnKcGfLk2sto/kFlSmyzyZwVb/FQ69DPtHP4crC1EAIa3m\nzklF2nZGocuJOW3jIDdx6ZPZ8X+s2EqTIStXkm3MJHCuMA646gebV7lbgIPoiI+X\nm2Bh2FT/80mAC7Hc21ppb3RmcYxytW11Q+xFA3c+bq0rlOhS0UA2CFj5K5bu9ahy\npyUckocCqjC7ItmYzGQCBTpiT5bHxaCz//UlGjxoRkuKfjr4Ll9gmr2OPQjfNKOG\nS4J+r5ziXcS45h00mzopwbwrcniSq2I9AmMDRrC6fhXlCixCbRyXeKKEK1xxaRUa\ndypXuAtKslvIRgnhhCz99rAsIAsZt6g3VDRGJTkihdYWxq8BI9CVyT5ilQEDCNgg\noKjO945ifRk1d2PNtrV9u/fgKPLG0i3uuJkqqGLTgIdRyo5wVtg0RqG0ebrROHLn\nRyApSlPofz0CVnxJq5OqE35MCG2vbR90MiC+Q5PHvvt3VXccQ4UrXfii54lNfjY1\nzy8f2PsDQj2l3Csyv2JCrvRZ3UBicQ==\n-----END CERTIFICATE-----&quot;
+  }
+}
+
+</code></pre><p>The query looks like this.</p>
+<pre><code>curl -k -i -b cookie-jar.txt -X PUT -H &quot;Content-Type:application/json&quot; https://vcsa-01.lab.ben-on-vms.com/rest/vcenter/certificate-management/vcenter/tls -d @tls-put-request.txt 
+
+</code></pre><p>And the response is.</p>
+<pre><code>HTTP/1.1 200 OK
+Date: Mon, 30 Dec 2019 21:16:38 GMT
+Content-Length: 0
+
+</code></pre><p>Now we will give the vCenter a quick reboot and when everything is back up and running we will test if the replacement was sucessfull.</p>
+<pre><code>[labuser@shell ~]$ openssl s_client -connect vcsa-01.lab.ben-on-vms.com:443 -showcerts &lt; /dev/null 2&gt;/dev/null | grep i:CN
+   i:CN = Ben on VMs Root CA
+
+</code></pre>
+</div>
+
+        <footer class="post-footer clearfix">
+    
+        <p class="post-tags">
+            <span>Tagged:</span>
+            
+            
+                <a href="/tags/vsphere/">vSphere</a>, 
+            
+                <a href="/tags/tls/ssl/">TLS/SSL</a>, 
+            
+                <a href="/tags/api/">API</a>
+            
+        </p>
+    
+
+    <div class="share">
+        
+            <a class="icon-twitter" href="https://twitter.com/share?text=Home%20Lab%20-%20Use%20our%20Root%20CA%20for%20the%20vCenter%20Certificate&url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-use-our-root-ca-for-the-vcenter-certificate%2f"
+                onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fa fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+        
+
+        
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-use-our-root-ca-for-the-vcenter-certificate%2f"
+                onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fa fa-facebook"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+        
+
+        
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-use-our-root-ca-for-the-vcenter-certificate%2f"
+              onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+              <i class="fa fa-google-plus"></i>
+                <span class="hidden">Google+</span>
+            </a>
+        
+        
+            <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&title=Home%20Lab%20-%20Use%20our%20Root%20CA%20for%20the%20vCenter%20Certificate&url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-use-our-root-ca-for-the-vcenter-certificate%2f&summary="
+               onclick="window.open(this.href, 'linkedin-share', 'width=554,height=481');return false;">
+               <i class="fa fa-linkedin"></i>
+               <span class="hidden">LinkedIn</span>
+            </a>
+        
+    </div>
+</footer>
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+
+                <p class="footer-copyright">
+                    <span>&copy; 2020 / Powered by <a href="https://gohugo.io/">Hugo</a></span>
+                </p>
+                <p class="footer-copyright">
+                    <span><a href="https://github.com/roryg/ghostwriter">Ghostwriter theme</a> By <a href="http://jollygoodthemes.com">JollyGoodThemes</a></span>
+                    <span>/ <a href="https://github.com/jbub/ghostwriter">Ported</a> to Hugo By <a href="https://github.com/jbub">jbub</a></span>
+                </p>
+            </div>
+        </footer>
+
+        <script src="https://ben-on-vms.com/js/jquery-1.11.3.min.js"></script>
+        <script src="https://ben-on-vms.com/js/jquery.fitvids.js"></script>
+        <script src="https://ben-on-vms.com/js/scripts.js"></script>
+    </body>
+</html>
+

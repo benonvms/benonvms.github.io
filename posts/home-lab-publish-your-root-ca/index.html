@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns#">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Home Lab - Publish your Root CA in your Lab Network &middot; Benedikt Frenzel</title>
+        <meta name="description" content="In the last blog post we discussed how to add our Root CA to our VMs and we used copy and paste to distribute the certificate. Well this is prone to errors, and we can improve on this.
+Today we will setup a web server that will not only publish our certificate but also our certificate revocation list.
+As in my last post I will use PowerCLI to perform all vSphere tasks.">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.69.1" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta property="og:title" content="Home Lab - Publish your Root CA in your Lab Network">
+<meta property="og:description" content="In the last blog post we discussed how to add our Root CA to our VMs and we used copy and paste to distribute the certificate. Well this is prone to errors, and we can improve on this.
+Today we will setup a web server that will not only publish our certificate but also our certificate revocation list.
+As in my last post I will use PowerCLI to perform all vSphere tasks.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ben-on-vms.com/posts/home-lab-publish-your-root-ca/">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/site.css">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/syntax.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
+        
+        
+        
+    </head>
+    <body>
+        
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://ben-on-vms.com/index.xml"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/BenediktFrenzel" rel="me">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/benonvms" rel="me">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="LinkedIn" title="LinkedIn" href="https://ie.linkedin.com/in/benedikt-frenzel-942a7380/" rel="me">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Email" title="Email" href="mailto:hello@ben-on-vms.com">
+                                <i class="fa fa-envelope"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Blog" href="/">Blog</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="About" href="/page/about/">About</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container">
+        <header class="post-header">
+    <h1 class="post-title">Home Lab - Publish your Root CA in your Lab Network</h1>
+    
+</header>
+
+        <div class="post-content clearfix">
+    
+
+    <p>In the last <a href="/posts/home-lab-add-your-ca-to-your-centos-template/">blog post</a> we discussed how to add our Root CA to our VMs and we used copy and paste to distribute the certificate. Well this is prone to errors, and we can improve on this.</p>
+<p>Today we will setup a web server that will not only publish our certificate but also our certificate revocation list.</p>
+<p>As in my last post I will use PowerCLI to perform all vSphere tasks. So let&rsquo;s create a new VM.</p>
+<pre><code>PS /home/bfrenzel&gt; $ds = Get-Datastore -Name datastore2
+PS /home/bfrenzel&gt; $vmhost = Get-VMHost -Name '10.7.92.40'
+PS /home/bfrenzel&gt; $spec = Get-OSCustomizationSpec -Name 'CentOS 8'
+PS /home/bfrenzel&gt; $template = Get-Template -Name template-centos-8-with-root-ca
+PS /home/bfrenzel&gt; New-VM -Name ca-web -Template $template -VMHost $vmhost -Datastore $ds -OSCustomizationSpec $spec                                                     
+Name                 PowerState Num CPUs MemoryGB                      
+----                 ---------- -------- --------                       
+ca-web               PoweredOff 1        2.000       
+
+</code></pre><p>Now we need to Get the IP address of the VM and ssh into it.</p>
+<pre><code>PS /home/bfrenzel&gt; (Get-VM 'ca-web').Guest.IPAddress
+10.7.87.106
+fe80::250:56ff:feba:be4a
+PS /home/bfrenzel&gt; ssh labuser@10.7.87.106
+
+
+</code></pre><p>On the new VM we need to install a web server, my personal choice is nginx, so I will use it, but Apache httpd or anything else will work as well.</p>
+<pre><code>[root@ca-web ~]# dnf -y install nginx
+[root@ca-web ~]# systemctl enable --now nginx
+[root@ca-web ~]# firewall-cmd --permanent --zone=public --add-service http 
+success
+[root@ca-web ~]# firewall-cmd --permanent --zone=public --add-service https
+success
+[root@ca-web ~]# firewall-cmd --reload
+success
+</code></pre><p>The next steps will be performed on the Root CA VM</p>
+<p>First we will generate a SSH key so the causer can login to the webserver remotely.</p>
+<pre><code>[causer@root-ca ~]$ ssh-keygen -b 8192 
+[causer@root-ca ~]$ ssh-copy-id labuser@10.7.87.106
+
+</code></pre><p>Now we will create a script that will copy the files to our new web server.</p>
+<pre><code>[causer@root-ca ~]$ vim .local/bin/ca-sync.sh
+</code></pre><pre><code>#!/usr/bin/env bash
+
+webserver=&quot;10.7.87.106&quot;
+webserveruser=&quot;root&quot;
+webpath=&quot;/usr/share/nginx/html/&quot;
+pkipath=&quot;${HOME}/pki&quot;
+
+scp ${pkipath}/ca.crt ${webserveruser}@${webserver}:${webpath}
+ssh ${webserveruser}@${webserver} chmod a+r ${webpath}/ca.crt
+
+</code></pre><p>So after we created the script we can no do the initial sync.</p>
+<pre><code>[causer@root-ca ~]$ ca-sync.sh 
+ca.crt                                                                                                100% 1923     1.0MB/s   00:00  
+</code></pre><p>At last we can create a cronjob for our causer, so we update the CA related files regularly.</p>
+<pre><code>[causer@root-ca ~]$ crontab -l
+*/5 * * * * $HOME/.local/bin/ca-sync.sh
+
+</code></pre>
+</div>
+
+        <footer class="post-footer clearfix">
+    
+        <p class="post-tags">
+            <span>Tagged:</span>
+            
+            
+                <a href="/tags/lab/">Lab</a>, 
+            
+                <a href="/tags/linux/">Linux</a>, 
+            
+                <a href="/tags/tls/ssl/">TLS/SSL</a>
+            
+        </p>
+    
+
+    <div class="share">
+        
+            <a class="icon-twitter" href="https://twitter.com/share?text=Home%20Lab%20-%20Publish%20your%20Root%20CA%20in%20your%20Lab%20Network&url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-publish-your-root-ca%2f"
+                onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fa fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+        
+
+        
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-publish-your-root-ca%2f"
+                onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fa fa-facebook"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+        
+
+        
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-publish-your-root-ca%2f"
+              onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+              <i class="fa fa-google-plus"></i>
+                <span class="hidden">Google+</span>
+            </a>
+        
+        
+            <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&title=Home%20Lab%20-%20Publish%20your%20Root%20CA%20in%20your%20Lab%20Network&url=https%3a%2f%2fben-on-vms.com%2fposts%2fhome-lab-publish-your-root-ca%2f&summary="
+               onclick="window.open(this.href, 'linkedin-share', 'width=554,height=481');return false;">
+               <i class="fa fa-linkedin"></i>
+               <span class="hidden">LinkedIn</span>
+            </a>
+        
+    </div>
+</footer>
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+
+                <p class="footer-copyright">
+                    <span>&copy; 2020 / Powered by <a href="https://gohugo.io/">Hugo</a></span>
+                </p>
+                <p class="footer-copyright">
+                    <span><a href="https://github.com/roryg/ghostwriter">Ghostwriter theme</a> By <a href="http://jollygoodthemes.com">JollyGoodThemes</a></span>
+                    <span>/ <a href="https://github.com/jbub/ghostwriter">Ported</a> to Hugo By <a href="https://github.com/jbub">jbub</a></span>
+                </p>
+            </div>
+        </footer>
+
+        <script src="https://ben-on-vms.com/js/jquery-1.11.3.min.js"></script>
+        <script src="https://ben-on-vms.com/js/jquery.fitvids.js"></script>
+        <script src="https://ben-on-vms.com/js/scripts.js"></script>
+    </body>
+</html>
+

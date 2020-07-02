@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns#">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>My VCSA 6.5 does not send emails – Connection refused by [127.0.0.1] &middot; Benedikt Frenzel</title>
+        <meta name="description" content="This is another issue I see from time to time in Support Requests showing up in my team
+This time the DNS settings are fine but the Appliance is still not able to send the emails, and a reboot of the appliance is not helping.
+So let’s have a look at the /var/log/messages.
+2018-01-15T12:44:41.259549&#43;01:00 vcenter sendmail[35923]: w0FBifp0035923: from=server&#43;bfr-vcsa-01@int.bens.systems size=535, class=0, nrcpts=1, msgid=&lt;201801151144.w0FBifp0035923@vcenter.example.com&gt;, relay=root@localhost 2018-01-15T12:44:41.275104&#43;01:00 vcenter sendmail[35923]: w0FBifp0035923: to=admin@bens.systems, ctladdr=server&#43;bfr-vcsa-01@int.bens.systems (0/0), delay=00:00:00, xdelay=00:00:00, mailer=relay, pri=30535, relay=[127.">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.69.1" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta property="og:title" content="My VCSA 6.5 does not send emails – Connection refused by [127.0.0.1]">
+<meta property="og:description" content="This is another issue I see from time to time in Support Requests showing up in my team
+This time the DNS settings are fine but the Appliance is still not able to send the emails, and a reboot of the appliance is not helping.
+So let’s have a look at the /var/log/messages.
+2018-01-15T12:44:41.259549&#43;01:00 vcenter sendmail[35923]: w0FBifp0035923: from=server&#43;bfr-vcsa-01@int.bens.systems size=535, class=0, nrcpts=1, msgid=&lt;201801151144.w0FBifp0035923@vcenter.example.com&gt;, relay=root@localhost 2018-01-15T12:44:41.275104&#43;01:00 vcenter sendmail[35923]: w0FBifp0035923: to=admin@bens.systems, ctladdr=server&#43;bfr-vcsa-01@int.bens.systems (0/0), delay=00:00:00, xdelay=00:00:00, mailer=relay, pri=30535, relay=[127.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ben-on-vms.com/posts/my-vcsa-6-5-does-not-send-emails-connection-refused-by-127-0-0-1/">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/site.css">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/syntax.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
+        
+        
+        
+    </head>
+    <body>
+        
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://ben-on-vms.com/index.xml"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/BenediktFrenzel" rel="me">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/benonvms" rel="me">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="LinkedIn" title="LinkedIn" href="https://ie.linkedin.com/in/benedikt-frenzel-942a7380/" rel="me">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Email" title="Email" href="mailto:hello@ben-on-vms.com">
+                                <i class="fa fa-envelope"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Blog" href="/">Blog</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="About" href="/page/about/">About</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container">
+        <header class="post-header">
+    <h1 class="post-title">My VCSA 6.5 does not send emails – Connection refused by [127.0.0.1]</h1>
+    
+</header>
+
+        <div class="post-content clearfix">
+    
+
+    <p>This is another issue I see from time to time in Support Requests showing up in my team</p>
+<p>This time the DNS settings are fine but the Appliance is still not able to send the emails, and a reboot of the appliance is not helping.</p>
+<p>So let’s have a look at the /var/log/messages.</p>
+<pre><code>2018-01-15T12:44:41.259549+01:00 vcenter sendmail[35923]: w0FBifp0035923: from=server+bfr-vcsa-01@int.bens.systems size=535, class=0, nrcpts=1, msgid=&lt;201801151144.w0FBifp0035923@vcenter.example.com&gt;, relay=root@localhost
+2018-01-15T12:44:41.275104+01:00 vcenter sendmail[35923]: w0FBifp0035923: to=admin@bens.systems, ctladdr=server+bfr-vcsa-01@int.bens.systems (0/0), delay=00:00:00, xdelay=00:00:00, mailer=relay, pri=30535, relay=[127.0.0.1] [127.0.0.1], dsn=4.0.0, stat=Deferred: Connection refused by [127.0.0.1]
+</code></pre><p>OK, so we will get a Connection refused by <code>[127.0.0.1]</code> when the vpxd process is trying to send the email to the local sendmail server for delivery to the relay host.</p>
+<p>When checking for the port with <code>netstat -tulpen | grep :25</code> we will get no result.</p>
+<p>In this case, restarting the service using <code>systemctl will</code> not help, as there will be a conflict regarding the port.</p>
+<p>The easiest way to fix the issue is to simply open the web client, go to the vCenter email settings and remove them, save the changes and re-add them.</p>
+<p>This will restart the sendmail daemon using the vCenter internal way of managing system services.</p>
+<p>Now you vCenter should send emails again.</p>
+
+</div>
+
+        <footer class="post-footer clearfix">
+    
+        <p class="post-tags">
+            <span>Tagged:</span>
+            
+            
+                <a href="/tags/vsphere/">vSphere</a>
+            
+        </p>
+    
+
+    <div class="share">
+        
+            <a class="icon-twitter" href="https://twitter.com/share?text=My%20VCSA%206.5%20does%20not%20send%20emails%20%e2%80%93%20Connection%20refused%20by%20%5b127.0.0.1%5d&url=https%3a%2f%2fben-on-vms.com%2fposts%2fmy-vcsa-6-5-does-not-send-emails-connection-refused-by-127-0-0-1%2f"
+                onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fa fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+        
+
+        
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fben-on-vms.com%2fposts%2fmy-vcsa-6-5-does-not-send-emails-connection-refused-by-127-0-0-1%2f"
+                onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fa fa-facebook"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+        
+
+        
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fben-on-vms.com%2fposts%2fmy-vcsa-6-5-does-not-send-emails-connection-refused-by-127-0-0-1%2f"
+              onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+              <i class="fa fa-google-plus"></i>
+                <span class="hidden">Google+</span>
+            </a>
+        
+        
+            <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&title=My%20VCSA%206.5%20does%20not%20send%20emails%20%e2%80%93%20Connection%20refused%20by%20%5b127.0.0.1%5d&url=https%3a%2f%2fben-on-vms.com%2fposts%2fmy-vcsa-6-5-does-not-send-emails-connection-refused-by-127-0-0-1%2f&summary="
+               onclick="window.open(this.href, 'linkedin-share', 'width=554,height=481');return false;">
+               <i class="fa fa-linkedin"></i>
+               <span class="hidden">LinkedIn</span>
+            </a>
+        
+    </div>
+</footer>
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+
+                <p class="footer-copyright">
+                    <span>&copy; 2020 / Powered by <a href="https://gohugo.io/">Hugo</a></span>
+                </p>
+                <p class="footer-copyright">
+                    <span><a href="https://github.com/roryg/ghostwriter">Ghostwriter theme</a> By <a href="http://jollygoodthemes.com">JollyGoodThemes</a></span>
+                    <span>/ <a href="https://github.com/jbub/ghostwriter">Ported</a> to Hugo By <a href="https://github.com/jbub">jbub</a></span>
+                </p>
+            </div>
+        </footer>
+
+        <script src="https://ben-on-vms.com/js/jquery-1.11.3.min.js"></script>
+        <script src="https://ben-on-vms.com/js/jquery.fitvids.js"></script>
+        <script src="https://ben-on-vms.com/js/scripts.js"></script>
+    </body>
+</html>
+

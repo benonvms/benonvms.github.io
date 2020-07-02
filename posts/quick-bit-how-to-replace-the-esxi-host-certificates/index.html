@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns#">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Quick Bit - How to replace the ESXi Host Certificates &middot; Benedikt Frenzel</title>
+        <meta name="description" content="Certificates are always a pain point. So I hope this will help you to just replace the certificates of your vSphere ESXi hosts with one signed by your Enterprise CA.
+Generate the Certificate Signing Request (CSR) First you want to login to a system with OpenSSL installed. After that you need to create a OpenSSL configuration file that will meet the requirements defined by VMware.
+[req] default_bits = 2048 prompt = no encrypt_key = no default_keyfile = nuc-01.">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.69.1" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta property="og:title" content="Quick Bit - How to replace the ESXi Host Certificates">
+<meta property="og:description" content="Certificates are always a pain point. So I hope this will help you to just replace the certificates of your vSphere ESXi hosts with one signed by your Enterprise CA.
+Generate the Certificate Signing Request (CSR) First you want to login to a system with OpenSSL installed. After that you need to create a OpenSSL configuration file that will meet the requirements defined by VMware.
+[req] default_bits = 2048 prompt = no encrypt_key = no default_keyfile = nuc-01.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ben-on-vms.com/posts/quick-bit-how-to-replace-the-esxi-host-certificates/">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/site.css">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/syntax.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
+        
+        
+        
+    </head>
+    <body>
+        
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://ben-on-vms.com/index.xml"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/BenediktFrenzel" rel="me">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/benonvms" rel="me">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="LinkedIn" title="LinkedIn" href="https://ie.linkedin.com/in/benedikt-frenzel-942a7380/" rel="me">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Email" title="Email" href="mailto:hello@ben-on-vms.com">
+                                <i class="fa fa-envelope"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Blog" href="/">Blog</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="About" href="/page/about/">About</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container">
+        <header class="post-header">
+    <h1 class="post-title">Quick Bit - How to replace the ESXi Host Certificates</h1>
+    
+</header>
+
+        <div class="post-content clearfix">
+    
+
+    <p>Certificates are always a pain point. So I hope this will help you to just replace the certificates of your vSphere ESXi hosts with one signed by your Enterprise CA.</p>
+<h2 id="generate-the-certificate-signing-request-csr">Generate the Certificate Signing Request (CSR)</h2>
+<p>First you want to login to a system with OpenSSL installed. After that you need to create a OpenSSL configuration file that will meet the <a href="https://docs.vmware.com/en/VMware-vSphere/6.7/com.vmware.vsphere.security.doc/GUID-0AE0B563-59D6-45A5-BF46-6FE68607687B.html">requirements defined by VMware</a>.</p>
+<pre><code>[req]
+default_bits       = 2048
+prompt             = no
+encrypt_key        = no
+default_keyfile    = nuc-01.benslab.local.key
+default_md         = sha256
+req_extensions     = req_ext
+distinguished_name = dn
+
+[ dn ]
+CN = nuc-01.benslab.local
+C  = IE
+ST = Cork
+L  = Cork
+O  = benslab
+OU = vsphere
+
+[ req_ext ]
+subjectAltName       = @alt_names
+subjectKeyIdentifier = hash
+keyUsage             = digitalSignature, nonRepudiation, keyEncipherment
+
+[ alt_names ]
+DNS.1 = nuc-01.benslab.local
+DNS.2 = 172.19.92.20
+IP.1  = 172.19.92.20
+</code></pre><p>You just need to change the values to match your environment. After creating all the configuration files for the hosts we can generate the private keys and the CSRs.</p>
+<pre><code>root@photon-01 [ ~/ssl ]# openssl req -new -config nuc-01.benslab.local.cfg -out nuc-01.benslab.local.csr
+</code></pre><p>This will generate the private key and the CSR:</p>
+<pre><code>root@photon-01 [ ~/ssl ]# ls -la
+total 20
+drwxr-x--- 2 root root 4096 Sep 25 16:01 .
+drwxr-x--- 5 root root 4096 Sep 25 16:01 ..
+-rw-r----- 1 root root  529 Sep 25 16:00 nuc-01.benslab.local.cfg
+-rw-r----- 1 root root 1167 Sep 25 16:01 nuc-01.benslab.local.csr
+-rw-r----- 1 root root 1704 Sep 25 16:01 nuc-01.benslab.local.key
+root@photon-01 [ ~/ssl ]#
+</code></pre><h2 id="getting-your-certificate">Getting your Certificate</h2>
+<p>In this example I will be using Active Directory Certificate Services to sign the Certificate Request of my Host.</p>
+<p>First you need to get the CSR of the system that was used to generate it.</p>
+<pre><code>root@photon-01 [ ~/ssl ]# cat nuc-01.benslab.local.csr
+-----BEGIN CERTIFICATE REQUEST-----
+MIIDJTCCAg0CAQAwbjEdMBsGA1UEAwwUbnVjLTAxLmJlbnNsYWIubG9jYWwxCzAJ
+BgNVBAYTAklFMQ0wCwYDVQQIDARDb3JrMQ0wCwYDVQQHDARDb3JrMRAwDgYDVQQK
+DAdiZW5zbGFiMRAwDgYDVQQLDAd2c3BoZXJlMIIBIjANBgkqhkiG9w0BAQEFAAOC
+AQ8AMIIBCgKCAQEA6cyesaB0+TvyK397pcFmQAlfpV0Up6mHJe2lDQ5rAr3iytiB
+pRKCbOZz33k2lHwKR22gJjS1QIU3jnkjCW75mht+u07O3n1LuWVoKoj1f+ABtcVc
+wvlP4oshRiqPn6rPklLyvRrfgO44YmkL6npN3EpbEaraFNftLQRaBMzDwTHsMZsa
+JvChGPyebe/xrj3wZkIauJrVblDHn4WN9pfh3xOC76OtLfIaVcUXru0XtLsG5sbO
+FElyimrAIP676ODxtASKfsgR+cuGJ6i8jHSh/pA6XAx9r6aIDPiuKCqdGXJdnY5h
+JeEkD62UqskD9zMlVykt/6a74qQeAjiGiSlOBQIDAQABoHIwcAYJKoZIhvcNAQkO
+MWMwYTAzBgNVHREELDAqghRudWMtMDEuYmVuc2xhYi5sb2NhbIIMMTcyLjE5Ljky
+LjIwhwSsE1wUMB0GA1UdDgQWBBRyg+aFq5ZPfuuWr7/2OZOsi7sIwDALBgNVHQ8E
+BAMCBeAwDQYJKoZIhvcNAQELBQADggEBAGPjFhInYGf3YpHju1XHIHb/xAMjg7av
+3UjLHrOIyThmYBg4LTuBLS99Yn6UI8GYSceEWUyptyoTKr10sVtTOwdMiCBb0J54
++AC/3oaw8jAr1MFCGjKEw0i00dVLKj7Uk3FGtHoEJQI9bYI3WGQH0e6fjse6qex0
+l6Bd47eJU1uj+nmVgheYOfWBnqnaU+Fql+rnVxGD/FK5E6miByAk/E27n/+2DDCP
+e/5cI5gX1VmCYKln2mZ6EELbxop1fYghIZUiDXKYXyOZHwe/wm8iElVEAUHHlGuC
+JJP5Vd5D/CgyO1TW/ywUC/2yRGu+lzTJ/rb0sJBbqxQnANQndkkb9gc=
+-----END CERTIFICATE REQUEST-----
+root@photon-01 [ ~/ssl ]#
+</code></pre><p>After that you need to log in to your CAs web portal.
+After selecting &ldquo;Request a certificate&rdquo; we have to select the Submit a certificate request option.
+And provide our CSR from earlier.
+When it comes to exporting we choose Base64 encoded and we want the full chain.
+After the Download we open the resulting .p7b file
+And export all the certificates in there, again using the Base64 option.</p>
+<h2 id="changing-the-host-certificate">Changing the Host Certificate</h2>
+<p>With all the preparation out of the way you can now go and replace the certificate on the host.</p>
+<p>Now let&rsquo;s copy the files to the host.</p>
+<pre><code>root@photon-01 [ ~/ssl ]# scp nuc-01.benslab.local.{cer,key} root@172.19.92.20:/
+Password:
+nuc-01.benslab.local.cer                           100% 1257     5.7MB/s   00:00
+nuc-01.benslab.local.key                           100% 1704    10.8MB/s   00:00
+root@photon-01 [ ~/ssl ]#
+</code></pre><p>Before we begin let us create a backup of the current certificates just in case.</p>
+<pre><code>root@photon-01 [ ~/ssl ]# scp root@172.19.92.20:/etc/vmware/ssl/rui.* nuc-01.benslab.local-certificate-backup-2019-09-26/*
+Password:
+rui.bak                                            100%    0     0.0KB/s   00:00
+rui.crt                                            100% 1501     6.7MB/s   00:00
+rui.key                                            100% 1704     9.1MB/s   00:00
+rui.log                                            100% 3284    11.5MB/s   00:00
+root@photon-01 [ ~/ssl ]#
+</code></pre><p>The easiest part is the actual replacement:</p>
+<pre><code>[root@nuc-01:~] mv nuc-01.benslab.local.key /etc/vmware/ssl/rui.key
+[root@nuc-01:~] mv nuc-01.benslab.local.cer /etc/vmware/ssl/rui.crt
+</code></pre><p>Now we just need to reboot the host, and that was it:</p>
+<pre><code>root@photon-01 [ ~ ]# openssl s_client -connect 172.19.92.20:443 &lt; /dev/null 2&gt;/dev/null | grep -e subject -e issuer
+subject=/C=IE/ST=Cork/L=Cork/O=benslab/OU=vsphere/CN=nuc-01.benslab.local
+issuer=/DC=local/DC=benslab/CN=Ben's Lab Root CA
+root@photon-01 [ ~ ]#
+</code></pre>
+</div>
+
+        <footer class="post-footer clearfix">
+    
+        <p class="post-tags">
+            <span>Tagged:</span>
+            
+            
+                <a href="/tags/vsphere/">vSphere</a>, 
+            
+                <a href="/tags/tls/ssl/">TLS/SSL</a>
+            
+        </p>
+    
+
+    <div class="share">
+        
+            <a class="icon-twitter" href="https://twitter.com/share?text=Quick%20Bit%20-%20How%20to%20replace%20the%20ESXi%20Host%20Certificates&url=https%3a%2f%2fben-on-vms.com%2fposts%2fquick-bit-how-to-replace-the-esxi-host-certificates%2f"
+                onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fa fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+        
+
+        
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fben-on-vms.com%2fposts%2fquick-bit-how-to-replace-the-esxi-host-certificates%2f"
+                onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fa fa-facebook"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+        
+
+        
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fben-on-vms.com%2fposts%2fquick-bit-how-to-replace-the-esxi-host-certificates%2f"
+              onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+              <i class="fa fa-google-plus"></i>
+                <span class="hidden">Google+</span>
+            </a>
+        
+        
+            <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&title=Quick%20Bit%20-%20How%20to%20replace%20the%20ESXi%20Host%20Certificates&url=https%3a%2f%2fben-on-vms.com%2fposts%2fquick-bit-how-to-replace-the-esxi-host-certificates%2f&summary="
+               onclick="window.open(this.href, 'linkedin-share', 'width=554,height=481');return false;">
+               <i class="fa fa-linkedin"></i>
+               <span class="hidden">LinkedIn</span>
+            </a>
+        
+    </div>
+</footer>
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+
+                <p class="footer-copyright">
+                    <span>&copy; 2020 / Powered by <a href="https://gohugo.io/">Hugo</a></span>
+                </p>
+                <p class="footer-copyright">
+                    <span><a href="https://github.com/roryg/ghostwriter">Ghostwriter theme</a> By <a href="http://jollygoodthemes.com">JollyGoodThemes</a></span>
+                    <span>/ <a href="https://github.com/jbub/ghostwriter">Ported</a> to Hugo By <a href="https://github.com/jbub">jbub</a></span>
+                </p>
+            </div>
+        </footer>
+
+        <script src="https://ben-on-vms.com/js/jquery-1.11.3.min.js"></script>
+        <script src="https://ben-on-vms.com/js/jquery.fitvids.js"></script>
+        <script src="https://ben-on-vms.com/js/scripts.js"></script>
+    </body>
+</html>
+

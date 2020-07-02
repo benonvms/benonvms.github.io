@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html prefix="og: http://ogp.me/ns#">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>root masquerading in VCSA 6.0 &middot; Benedikt Frenzel</title>
+        <meta name="description" content="Hi all,
+I blogged about it in the past on my other blog, which got eaten by the Internet 😉
+So as I already blogged about email notifications in the vCenter Appliance 6.5. But I guess there are still some 6.0 appliances out there.
+Here are my old notes, hope they help. Set the mail server config on the vCenter UI Set the SMTP Server to 127.0.0.1 and the E-Mail Adress to the E-Mail Adress the vCenter should use to send the email.">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.69.1" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta property="og:title" content="root masquerading in VCSA 6.0">
+<meta property="og:description" content="Hi all,
+I blogged about it in the past on my other blog, which got eaten by the Internet 😉
+So as I already blogged about email notifications in the vCenter Appliance 6.5. But I guess there are still some 6.0 appliances out there.
+Here are my old notes, hope they help. Set the mail server config on the vCenter UI Set the SMTP Server to 127.0.0.1 and the E-Mail Adress to the E-Mail Adress the vCenter should use to send the email.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ben-on-vms.com/posts/root-masquerading-in-vcsa-6-0/">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/site.css">
+        <link rel="stylesheet" href="https://ben-on-vms.com/dist/syntax.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
+        
+        
+        
+    </head>
+    <body>
+        
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://ben-on-vms.com/index.xml"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/BenediktFrenzel" rel="me">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/benonvms" rel="me">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="LinkedIn" title="LinkedIn" href="https://ie.linkedin.com/in/benedikt-frenzel-942a7380/" rel="me">
+                                <i class="fa fa-linkedin"></i>
+                            </a>
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Email" title="Email" href="mailto:hello@ben-on-vms.com">
+                                <i class="fa fa-envelope"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Blog" href="/">Blog</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="About" href="/page/about/">About</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container">
+        <header class="post-header">
+    <h1 class="post-title">root masquerading in VCSA 6.0</h1>
+    
+</header>
+
+        <div class="post-content clearfix">
+    
+
+    <p>Hi all,</p>
+<p>I blogged about it in the past on my other blog, which got eaten by the Internet 😉</p>
+<p>So as I already blogged about email notifications in the vCenter Appliance 6.5. But I guess there are still some 6.0 appliances out there.</p>
+<h2 id="here-are-my-old-notes-hope-they-help">Here are my old notes, hope they help.</h2>
+<p>Set the mail server config on the vCenter UI
+Set the SMTP Server to 127.0.0.1 and the E-Mail Adress to the E-Mail Adress the vCenter should use to send the email.</p>
+<h2 id="configure-the-address-translation-for-the-root-user">Configure the Address Translation for the root user</h2>
+<p>Edit the File <code>/etc/mail/genericstable</code></p>
+<pre><code># /etc/mail/genericstable
+#
+# Author: Werner Fink
+# Please send feedback to http://www.suse.de/feedback/
+#
+# Description:
+#
+#  map outgoing sender addresses from the (unqualified) left hand side
+#  to the qualified addresses on the right hand side.  The same types
+#  of addresses as for masquerading are looked up, i.e., only header
+#  sender addresses unless the allmasquerade and/or masquerade_envelope
+#  features are given (/etc/sysconfig/mail -&gt; FROM_HEADER). Qualified addresses
+#  must have the domain part in the list of names given by the by the
+#  macro GENERICS_DOMAIN (/etc/sysconfig/sendmail -&gt; SENDMAIL_GENERICS_DOMAIN).
+#
+# Format:
+#
+#user@uqhost        realuser@fqhost
+#userrealuser@fqhost
+root    webform@vmware.com
+Configure the sendmail.cf
+Download the sendmail.cf
+</code></pre><p>Please edit the following Lines so the represent the customer enviroment and save it as /etc/sendmail.cf on the vcsa:</p>
+<pre><code># &quot;Smart&quot; relay host (may be null)
+DSsmarthost.repro.benslab.local
+</code></pre><pre><code># class E: names that should be exposed as from this host, even if we masquerade
+# class L: names that should be delivered locally, even if we have a relay
+# class M: domains that should be converted to $M
+# class N: domains that should not be converted to $M
+#CL root
+C{M}vcsa.repro.benslab.local
+C{G}repro.benslab.local
+F{G}/etc/mail/genericstable
+#C{E}root
+# who I masquerade as (null for no masquerading) (see also $=M)
+DMrepro.benslab.local
+</code></pre><pre><code>Cwlocalhost  vcsa.repro.benslab.local
+</code></pre><p>Last but not least:
+Run the following commands to build the new genericstable and to restart the sendmail service</p>
+<pre><code>makemap -r hash /etc/mail/genericstable.db &lt; /etc/mail/genericstable
+service sendmail restart
+</code></pre><p>Yours,</p>
+<p>Benedikt</p>
+
+</div>
+
+        <footer class="post-footer clearfix">
+    
+
+    <div class="share">
+        
+            <a class="icon-twitter" href="https://twitter.com/share?text=root%20masquerading%20in%20VCSA%206.0&url=https%3a%2f%2fben-on-vms.com%2fposts%2froot-masquerading-in-vcsa-6-0%2f"
+                onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fa fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+        
+
+        
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fben-on-vms.com%2fposts%2froot-masquerading-in-vcsa-6-0%2f"
+                onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fa fa-facebook"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+        
+
+        
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fben-on-vms.com%2fposts%2froot-masquerading-in-vcsa-6-0%2f"
+              onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+              <i class="fa fa-google-plus"></i>
+                <span class="hidden">Google+</span>
+            </a>
+        
+        
+            <a class="icon-linkedin" href="https://www.linkedin.com/shareArticle?mini=true&title=root%20masquerading%20in%20VCSA%206.0&url=https%3a%2f%2fben-on-vms.com%2fposts%2froot-masquerading-in-vcsa-6-0%2f&summary="
+               onclick="window.open(this.href, 'linkedin-share', 'width=554,height=481');return false;">
+               <i class="fa fa-linkedin"></i>
+               <span class="hidden">LinkedIn</span>
+            </a>
+        
+    </div>
+</footer>
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Ben writes about VMs and Stuff" href="https://ben-on-vms.com/">Ben writes about VMs and Stuff</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+
+                <p class="footer-copyright">
+                    <span>&copy; 2020 / Powered by <a href="https://gohugo.io/">Hugo</a></span>
+                </p>
+                <p class="footer-copyright">
+                    <span><a href="https://github.com/roryg/ghostwriter">Ghostwriter theme</a> By <a href="http://jollygoodthemes.com">JollyGoodThemes</a></span>
+                    <span>/ <a href="https://github.com/jbub/ghostwriter">Ported</a> to Hugo By <a href="https://github.com/jbub">jbub</a></span>
+                </p>
+            </div>
+        </footer>
+
+        <script src="https://ben-on-vms.com/js/jquery-1.11.3.min.js"></script>
+        <script src="https://ben-on-vms.com/js/jquery.fitvids.js"></script>
+        <script src="https://ben-on-vms.com/js/scripts.js"></script>
+    </body>
+</html>
+
