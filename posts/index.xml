@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Ben writes about VMs</title>
+    <link>http://ben-on-vms.com/posts/</link>
+    <description>Recent content in Posts on Ben writes about VMs</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Thu, 02 Jul 2020 14:01:35 +0100</lastBuildDate>
+    
+	<atom:link href="http://ben-on-vms.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Quick Bit - Unpublish an Expired Root CA</title>
+      <link>http://ben-on-vms.com/posts/quick-bit-unpublish-an-expired-root-ca/</link>
+      <pubDate>Thu, 02 Jul 2020 14:01:35 +0100</pubDate>
+      
+      <guid>http://ben-on-vms.com/posts/quick-bit-unpublish-an-expired-root-ca/</guid>
+      <description>The vCenter Server may shows a Certificate Alert if there is an expired root certificate in the trusted root store.
+To remove it the following steps may be used:
+ Backup the vCenter Servers and all PSCs Get the list of the current CAs that are in use  Check the Certificates in the vecs on all nodes  for store in $(/usr/lib/vmware-vmafd/bin/vecs-cli store list | grep -v TRUSTED_ROOT_CRLS); do echo &amp;#34;[*] Store :&amp;#34; $store;\  /usr/lib/vmware-vmafd/bin/vecs-cli entry list --store $store --text | grep -ie &amp;#34;Alias&amp;#34; -ie &amp;#34;Subject&amp;#34; -ie &amp;#34;Issuer&amp;#34;; \ done;  Export the Certificates not in use form the TRUSTED_ROOTS on the PSC /usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store TRUSTED_ROOTS --alias &amp;#34;alias from the vecs entry&amp;#34; --output /tmp/&amp;#34;filename&amp;#34;  Unpublish the Certificates from the vmdir on the PSC /usr/lib/vmware-vmafd/bin/dir-cli trustedcert unpublish --cert-file &amp;lt;file&amp;gt; --login &amp;lt;admin_user_id&amp;gt; --password &amp;lt;admin_password&amp;gt;  Use the Alias from the unused Certificates to delete the CRL on the PSC /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store TRUSTED_ROOT_CRLS -y --alias &amp;#34;alias from the vecs entry&amp;#34;  Force a vecs sync on all nodes /usr/lib/vmware-vmafd/bin/vecs-cli force-refresh   </description>
+    </item>
+    
+  </channel>
+</rss>
